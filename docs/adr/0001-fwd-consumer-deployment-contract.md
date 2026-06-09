@@ -206,6 +206,14 @@ re-import). The remaining links — `grant`, `bundle` (emit), `reconcile`, `conf
 the fwd half of `rotate` (re-mint) — are unbuilt, all on the **fwd / `provider`** side. The join
 becomes fully real only when fwd grants by id and `provider` reconciles on it.
 
+**Framework deferral (2026-06-09 — ADR-0002).** Building Units 3–5 + the one-shot bundle was
+briefly authorized, then **reversed** after an operator-requested adversarial review flagged it as
+premature (N=1 generalization, ~nil security delta, framework value only at multi-consumer scale).
+The framework is now **deferred and gated on a concrete consumer #2** — see
+[`0002-defer-fwd-bundle-grant-framework.md`](./0002-defer-fwd-bundle-grant-framework.md). Only the
+`fwdctl` **alias** (not the full rename) and `--json` on existing reads remain as opportunistic
+seam work.
+
 ## Ownership (anti-drift)
 
 | surface | owner |
