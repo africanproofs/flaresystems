@@ -1,0 +1,5 @@
+# Member projects are independent git repositories (own remotes + history).
+# The umbrella tracks only the cross-project layer (docs; the future provider/deploy coordinator).
+/fwd/
+/fwd-client/
+/clif/
