@@ -2,11 +2,11 @@
 
 - **Status:** Accepted (contract). Rollout: pending — clif-migration-first.
 - **Date:** 2026-06-09
-- **Scope:** cross-project — `fwd`, `clif`, future fwd consumers, the future deploy repo.
-- **Location:** **interim.** This file lives in the (untracked) root `proofs.africa/docs/`
-  while no deploy repo exists — same convention as the root constitution. Its versioned home
-  is the deploy repo's `docs/decisions.md`; copy the operative version there on creation and
-  leave a pointer here.
+- **Scope:** cross-project — `fwd`, `clif`, future fwd consumers, the `provider` coordinator.
+- **Location:** git-tracked in the **`flaresystems`** umbrella repo
+  (`flaresystems/docs/adr/`) — the fwd-ecosystem home for the cross-project coordination
+  layer. The earlier "untracked root file" durability gap is **closed**. If a dedicated
+  deploy repo is later split out, this ADR moves with it.
 
 ## Context
 
@@ -167,8 +167,10 @@ Future `provider verify-consumer` / `provider doctor` check these:
 
 ## Provenance / next
 
-- Interim, untracked (root `proofs.africa/` is not a git repo, like the constitution). On
-  deploy-repo creation, copy the operative version into its `docs/decisions.md` and leave a
-  one-line pointer here.
-- Pointers to add: the root constitution (`proofs.africa/CLAUDE.md`) and the fwd repo (a
-  fwd-side task). clif carries a git-tracked breadcrumb as the reference consumer.
+- Now git-tracked in the `flaresystems` umbrella repo — the loose-root-file durability gap is
+  closed. `flaresystems` is the home for the cross-project coordination layer (`provider`,
+  `consumer-contract-v1`, the manifest); if those are later split into a dedicated deploy
+  repo, this ADR moves with them.
+- Pointers to add: the root constitution (`proofs.africa/CLAUDE.md`, project-map paths now
+  under `flaresystems/`) and the fwd repo (a fwd-side task). clif may carry a breadcrumb as
+  the reference consumer.
