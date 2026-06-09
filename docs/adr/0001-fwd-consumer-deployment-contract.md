@@ -149,38 +149,62 @@ Future `provider verify-consumer` / `provider doctor` check these:
 ## Rollout status (2026-06-09)
 
 A point-in-time snapshot of the contract against reality (update on each material change).
-The contract is recorded; one consumer (clif) speaks its two **consumer-facing** seams; the
-custody, coordinator, and handoff sides are unbuilt.
+**Reconciled 2026-06-09 against a code-level audit of clif / fwd / fwd-client** — the prior
+snapshot under-reported clif's shipped import half and under-framed the fwd naming gap (both
+corrected below). The contract is recorded; the reference consumer (clif) speaks **all of its
+consumer-facing seams**; the custody, coordinator, and remaining handoff sides are unbuilt or
+gated.
 
-**Built — clif, the reference consumer (shipped):**
+**Built — clif, the reference consumer (shipped, v0.5.37):**
 
 - `capability_id` is real: `clif/<net>/{claim,fsp-sign,fsp-submit}` (`clif/config.py`),
   emitted by `clif spec`.
 - The spec renders as a human-reviewable custody diff (§4) + machine-readable `clif spec --json`.
 - consumer→coordinator surface: `clif doctor` + `status --json` + `clifctl doctor/status --json`.
 - The compat tuple `{fwd_contract_expected, fwd_client, clif}`.
+- **`clif import-credentials` / `clifctl import-credentials` — the consumer (import) half of the
+  §5 handoff — is BUILT and C6-conformant** (`clif/credentials.py` + `clif/cli.py`, unit-tested):
+  validates `version==1` + consumer + `expires_at` + mode-0600 + governed `capability_id`s,
+  performs an idempotent id-keyed `.env.<net>` upsert (the rotation channel), one-shot-consumes
+  the bundle on success, and never logs a token value. It validates against the **pinned v1
+  bundle shape**; end-to-end against a *real fwd-emitted* bundle is blocked on the fwd emit half
+  (live gap 1).
 
-**Paper / unbuilt:** `clifwd`→`fwdctl`; an fwd grant minted *by* `capability_id`; the one-shot
-bundle handoff; `<x>ctl import-credentials`; `provider` (three-way doctor + drift taxonomy +
-manifest + `verify-consumer`); the normative `consumer-contract-v1`. Most are **deferred by
-design** until consumer #2 (§Scope).
+**Paper / unbuilt:** `clifwd`→`fwdctl` (and see live gap 2); an fwd grant minted *by*
+`capability_id`; the **fwd emit half** of the one-shot bundle handoff (fwd has no `capability_id`
+and no bundle emission — it still writes clif's env directly, live gap 1); `provider` (three-way
+doctor + drift taxonomy + manifest + `verify-consumer`); the provider-side normative
+`consumer-contract-v1` §7. Most are **deferred by design** until consumer #2 (§Scope). fwd is live
+at **v1.1.0a96**; the fwd-side program is staged (PREPARATORY, *unauthorized*) in the Phase-0
+reviewer brief `~/.claude/plans/fwd-dialect-phase0-brief.md` (Units 1–5), gated on the operator's
+Unit 1.
 
 **Two live gaps (not deferrals):**
 
-1. **The `--clif-env-dir` forcing function is unmet.** clif — the reference consumer — still
-   onboards via `fwd onboard --clif-env-dir`, the deprecated pattern §Migration requires
-   retiring *before* consumer #2. Cleaning it needs the fwd bundle-emission side, which is
-   unbuilt — so the exemplar is clean on the spec/doctor seams but still demonstrates the
-   handoff leak.
-2. **fwd has not ratified the dialect.** fwd's own constitution still endorses `clifwd` and
-   `--clif-env-dir`. This ADR is, today, **clif-side doctrine prescribing fwd-side behaviour
-   fwd has not adopted** (and partly contradicts). "fwd speaks the dialect" is a constitutional
-   amendment to fwd + a multi-ship custody program through fwd's gated Opus/Sonnet/Operator
-   workflow — not a clif-side edit.
+1. **The `--clif-env-dir` forcing function is unmet — but the consumer half is done.** clif's
+   import side is built + conformant (above); the blocker is the **fwd side**. fwd (v1.1.0a96)
+   still provisions clif via `fwd onboard --clif-env-dir`, writing clif's `.env.<net>` directly —
+   the §Migration pattern to retire *before* consumer #2, and a standing breach of Invariant #5
+   ("fwd never reads or writes a consumer's env"). Closing it needs fwd's bundle-emission side
+   (custody — unbuilt, gated). So the exemplar is clean on spec/doctor/import, yet the *live*
+   handoff is still the env-write leak until fwd emits bundles.
+2. **fwd has not adopted the dialect — and its current doctrine runs the other way.** fwd prescribes
+   its own doctrine (no ADR-0001 reference); its admin surface is `clifwd` throughout (`pyproject.toml`
+   console-script, `install/clifwd`, the Typer app) and its CLAUDE.md §Scope endorses it. On
+   `clifwd`→`fwdctl` this is not merely "unadopted": a prior fwd **docs** ship (v1.1.0a39, 2026-05-31,
+   predating this ADR) recorded the operator's choice to **reuse `clifwd` rather than add an
+   `fwc`/`fwdctl` command**. So §1's later "clifwd is retired in favour of fwdctl" runs **against fwd's
+   current doctrine and the operator's standing preference** — making the rename an **open, unbuilt
+   task** (the brief's Unit 2) gated behind an operator-only constitutional decision (Unit 1), not a
+   pending or mechanical edit. `--clif-env-dir` is likewise current, blessed fwd design. "fwd speaks
+   the dialect" is a constitutional amendment to fwd + a multi-ship custody program through fwd's gated
+   Opus/Sonnet/Operator workflow.
 
-**Spine status:** `capability_id` currently threads **1 of its 7** lifecycle links (the spec
-requests it); grant → bundle → import → reconcile → rotate → conflict-detect are unbuilt. The
-join becomes real only when fwd grants by id and `provider` reconciles on it.
+**Spine status:** `capability_id` threads **the consumer-side links it touches** — `spec`
+(requests it), `import` (id-keyed import), and the consumer half of `rotate` (idempotent
+re-import). The remaining links — `grant`, `bundle` (emit), `reconcile`, `conflict-detect`, and
+the fwd half of `rotate` (re-mint) — are unbuilt, all on the **fwd / `provider`** side. The join
+becomes fully real only when fwd grants by id and `provider` reconciles on it.
 
 ## Ownership (anti-drift)
 

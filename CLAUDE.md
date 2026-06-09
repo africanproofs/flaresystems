@@ -73,9 +73,12 @@ load-bearing decisions — **do not relitigate**:
 Not yet built; deferred until **consumer #2** forces them (ADR-0001 §Scope):
 the **`provider`** coordinator implementation, **`consumer-contract-v1`**'s
 normative schemas/verb-lists, and the deploy **manifest**. clif's own migration
-to the bundle/import handoff is the forcing function and lands **before**
-consumer #2 — the reference consumer must not run the deprecated
-`fwd onboard --clif-env-dir` pattern, or the first new consumer copies the leak.
+to the bundle/import handoff is the forcing function and must land **before**
+consumer #2 — clif's **import half (`clif import-credentials`) is built and
+C6-conformant**; what remains is fwd's **bundle-emission side** (custody —
+unbuilt, gated), so the migration off the deprecated `fwd onboard --clif-env-dir`
+pattern is blocked on fwd, not clif. Until it lands the reference consumer still
+runs the deprecated pattern, or the first new consumer copies the leak.
 
 ## Commits (inherited AP doctrine)
 
