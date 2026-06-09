@@ -1,6 +1,6 @@
 # ADR 0001 — fwd consumer deployment contract and capability handoff
 
-- **Status:** Accepted (contract). Rollout: pending — clif-migration-first.
+- **Status:** Accepted (contract). Rollout: pending — clif-migration-first (see § Rollout status).
 - **Date:** 2026-06-09
 - **Scope:** cross-project — `fwd`, `clif`, future fwd consumers, the `provider` coordinator.
 - **Location:** git-tracked in the **`flaresystems`** umbrella repo
@@ -145,6 +145,42 @@ Future `provider verify-consumer` / `provider doctor` check these:
 - **Deferred** until consumer #2 forces them: the generic registry loader, the deploy repo +
   `provider` implementation, and `consumer-contract-v1`'s normative schemas / verb-lists
   (illustrative here, normative there). **Build the seam; defer the framework.**
+
+## Rollout status (2026-06-09)
+
+A point-in-time snapshot of the contract against reality (update on each material change).
+The contract is recorded; one consumer (clif) speaks its two **consumer-facing** seams; the
+custody, coordinator, and handoff sides are unbuilt.
+
+**Built — clif, the reference consumer (shipped):**
+
+- `capability_id` is real: `clif/<net>/{claim,fsp-sign,fsp-submit}` (`clif/config.py`),
+  emitted by `clif spec`.
+- The spec renders as a human-reviewable custody diff (§4) + machine-readable `clif spec --json`.
+- consumer→coordinator surface: `clif doctor` + `status --json` + `clifctl doctor/status --json`.
+- The compat tuple `{fwd_contract_expected, fwd_client, clif}`.
+
+**Paper / unbuilt:** `clifwd`→`fwdctl`; an fwd grant minted *by* `capability_id`; the one-shot
+bundle handoff; `<x>ctl import-credentials`; `provider` (three-way doctor + drift taxonomy +
+manifest + `verify-consumer`); the normative `consumer-contract-v1`. Most are **deferred by
+design** until consumer #2 (§Scope).
+
+**Two live gaps (not deferrals):**
+
+1. **The `--clif-env-dir` forcing function is unmet.** clif — the reference consumer — still
+   onboards via `fwd onboard --clif-env-dir`, the deprecated pattern §Migration requires
+   retiring *before* consumer #2. Cleaning it needs the fwd bundle-emission side, which is
+   unbuilt — so the exemplar is clean on the spec/doctor seams but still demonstrates the
+   handoff leak.
+2. **fwd has not ratified the dialect.** fwd's own constitution still endorses `clifwd` and
+   `--clif-env-dir`. This ADR is, today, **clif-side doctrine prescribing fwd-side behaviour
+   fwd has not adopted** (and partly contradicts). "fwd speaks the dialect" is a constitutional
+   amendment to fwd + a multi-ship custody program through fwd's gated Opus/Sonnet/Operator
+   workflow — not a clif-side edit.
+
+**Spine status:** `capability_id` currently threads **1 of its 7** lifecycle links (the spec
+requests it); grant → bundle → import → reconcile → rotate → conflict-detect are unbuilt. The
+join becomes real only when fwd grants by id and `provider` reconciles on it.
 
 ## Ownership (anti-drift)
 
