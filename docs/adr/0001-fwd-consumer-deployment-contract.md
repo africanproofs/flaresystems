@@ -4,9 +4,10 @@
 - **Date:** 2026-06-09
 - **Scope:** cross-project — `fwd`, `clif`, future fwd consumers, the `provider` coordinator.
 - **Location:** git-tracked in the **`flaresystems`** umbrella repo
-  (`flaresystems/docs/adr/`) — the fwd-ecosystem home for the cross-project coordination
-  layer. The earlier "untracked root file" durability gap is **closed**. If a dedicated
-  deploy repo is later split out, this ADR moves with it.
+  (`github.com/africanproofs/flaresystems`, `docs/adr/`) — the fwd-ecosystem home for the
+  cross-project coordination layer. The earlier "untracked root file" durability gap is
+  **closed** (remote-backed). If a dedicated deploy repo is later split out, this ADR moves
+  with it.
 
 ## Context
 
@@ -167,10 +168,11 @@ Future `provider verify-consumer` / `provider doctor` check these:
 
 ## Provenance / next
 
-- Now git-tracked in the `flaresystems` umbrella repo — the loose-root-file durability gap is
-  closed. `flaresystems` is the home for the cross-project coordination layer (`provider`,
+- Now git-tracked **and remote-backed** in the `flaresystems` umbrella repo
+  (`github.com/africanproofs/flaresystems`) — the loose-root-file durability gap is closed.
+  `flaresystems` is the home for the cross-project coordination layer (`provider`,
   `consumer-contract-v1`, the manifest); if those are later split into a dedicated deploy
   repo, this ADR moves with them.
-- Pointers to add: the root constitution (`proofs.africa/CLAUDE.md`, project-map paths now
-  under `flaresystems/`) and the fwd repo (a fwd-side task). clif may carry a breadcrumb as
-  the reference consumer.
+- Pointers: the root constitution (`proofs.africa/CLAUDE.md`) records the `flaresystems/`
+  grouping + remote. Still to add: a fwd-repo pointer (fwd-side task); clif may carry a
+  breadcrumb as the reference consumer.

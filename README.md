@@ -2,7 +2,8 @@
 
 Umbrella workspace for the **fwd signer system** and its keyless consumers, and the
 home of the cross-project coordination layer (the deployment/`provider` runbook and the
-shared decision records) for the fwd ecosystem.
+shared decision records) for the fwd ecosystem. Repo:
+`github.com/africanproofs/flaresystems`.
 
 The member projects below are **independent git repositories** with their own remotes
 and history. They live inside this folder for co-location but are **gitignored here** —
