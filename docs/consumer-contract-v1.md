@@ -263,11 +263,21 @@ would re-expand the secret surface the membrane exists to shrink.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "consumer": "clif",
   "network": "songbird",
   "issued_at": "2026-06-09T12:00:00Z",
   "expires_at": "2026-06-09T12:10:00Z",
+  "config": {
+    "FWD_ENDPOINT": "http://fwd:8080",
+    "IDENTITY_ADDRESS": "0x...",
+    "CLAIM_RECIPIENT_ADDRESS": "0x...",
+    "WRAP_REWARDS": "false",
+    "FSP_AUTO_ENABLED": "true",
+    "UPTIME_AUTO_ENABLED": "false",
+    "EPOCH_REWARD_INITIAL_DELAY_SEC": "3600",
+    "EPOCH_POLL_INTERVAL_SEC": "1800"
+  },
   "capabilities": [
     {
       "capability_id": "clif/songbird/claim",
@@ -282,26 +292,33 @@ would re-expand the secret surface the membrane exists to shrink.
 
 | field | meaning |
 |---|---|
-| `version` | bundle schema version (`1` for `consumer-contract-v1`) |
+| `version` | bundle schema version: **`2`** = the complete handoff (config + capabilities); `1` = the prior tokens-only format |
 | `consumer` | MUST match the importing consumer's name |
 | `network` | the network this bundle's tokens are for; selects the target `.env.<net>` |
 | `issued_at` / `expires_at` | ISO-8601; import MUST refuse a bundle past `expires_at` |
 | `capabilities[].capability_id` | the join key (§1); the import is keyed on this |
 | `capabilities[].caller_token_env` | the env-var **name** to write the value into |
 | `capabilities[].caller_token` | **the secret value**, delivered once (a bearer token — NOT a signing key) |
-| `capabilities[].wallet_name` | the fwd wallet **name** for that capability |
+| `capabilities[].wallet_name` | the fwd wallet **name** for that capability (the importer writes it to the consumer's own `<wallet_env>`, which it knows because it governs the `capability_id`) |
+| `config` | a flat `{ENV_VAR: string}` map of the consumer's **non-secret** network config (endpoint, identity/recipient addresses, behaviour flags, timings) — written verbatim into `.env.<net>`. **NEVER a token or a signing key.** The importer **allowlists** the keys (§4.2) so the bundle cannot inject an arbitrary env var. |
 
 ### 4.2 Import semantics (NORMATIVE)
 
 `<x>ctl import-credentials <bundle-path>` MUST:
 
-1. **Verify** `version == 1`, `consumer` matches, `expires_at` is in the future,
-   and the bundle file is local + mode-0600. Refuse otherwise.
-2. **Be idempotent and keyed by `capability_id`** (ADR Invariant #4). For each
-   bundle entry, write `<caller_token_env>=<value>` into the consumer's per-network
-   `.env.<net>`, replacing any existing line for that env var. Re-running with a
-   bundle for the same `capability_id` updates in place — so the **same path is the
-   rotation / revocation channel**, not a one-time bootstrap.
+1. **Verify** `version == 2`, `consumer` matches, `expires_at` is in the future, the
+   bundle file is local + mode-0600, and **every `config` key is in the importer's
+   allowlist** of known config env-vars (reject an unknown key — the bundle MUST NOT be
+   able to inject an arbitrary env var), with clean values (no control chars / newlines).
+   Refuse otherwise. (`version == 1`, tokens-only, MAY be accepted for back-compat during transition.)
+2. **Be idempotent and keyed by `capability_id`** (ADR Invariant #4). For each bundle
+   entry, write `<caller_token_env>=<value>` **and** `<wallet_env>=<wallet_name>` (the
+   importer knows `<wallet_env>` because it governs the `capability_id`) into the consumer's
+   per-network `.env.<net>`, replacing any existing line. Then write each allowlisted `config`
+   `KEY=value` the same way. Re-running with a bundle for the same `capability_id` updates in
+   place — the **same path is the rotation / config-refresh channel**. The `config` makes the
+   bundle the **complete** handoff: fwd composes it; the consumer places its own env from it
+   (Invariant #5 — fwd never touches `.env`).
 3. **One-shot consume:** on success, **delete** the bundle file. A consumed bundle
    cannot be replayed.
 4. **Never log a token value.** Logs/output reference `capability_id` +
