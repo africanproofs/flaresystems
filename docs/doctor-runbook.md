@@ -10,7 +10,7 @@
 | leg | command | what it yields |
 |---|---|---|
 | **DESIRED** (manifest) | `clif spec --json` | the `capability_id`s the consumer **requests**. At N=1 the consumer's own spec *is* the manifest. |
-| **GRANTED** (fwd) | `fwdctl capabilities list --json` | the `capability_id`s fwd's **live policy** grants. **[lands with Unit 5]** — until Unit 5 ships, read manually: `clifwd callers list` + the `CallerBinding`s in the loaded `policy.yaml`. |
+| **GRANTED** (fwd) | `fwdctl capability list --json` | the `capability_id`s fwd's **live policy** grants. **[lands with Unit 5]** — until Unit 5 ships, read manually: `clifwd callers list` + the `CallerBinding`s in the loaded `policy.yaml`. |
 | **IMPORTED** (consumer) | `clif doctor --json` → `.capabilities[].configured` | which ids the consumer holds tokens for. |
 
 ## The reconcile (diff the three id-sets, joined on `capability_id`)
