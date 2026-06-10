@@ -1,6 +1,6 @@
 # ADR 0002 — Defer the fwd bundle/grant framework; gate it on a concrete consumer #2
 
-- **Status:** Accepted. **Date:** 2026-06-09.
+- **Status:** **SUPERSEDED by [ADR-0003](./0003-build-the-dialect-interface-cohesion.md)** (2026-06-10) — ADR-0002 gated on consumer *scale*; the driver is interface *coherence*, present at N=1. Its six captured requirements are carried forward as binding constraints in ADR-0003. **Date:** 2026-06-09.
 - **Scope:** cross-project — `fwd`, `clif`, future consumers, the `provider` coordinator.
 - **Location:** git-tracked in the `flaresystems` umbrella (`docs/adr/`). It **re-affirms**
   ADR-0001 §Scope ("build the seam; defer the framework until consumer #2 forces them") with an
