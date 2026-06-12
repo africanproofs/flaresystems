@@ -269,6 +269,7 @@ would re-expand the secret surface the membrane exists to shrink.
   "issued_at": "2026-06-09T12:00:00Z",
   "expires_at": "2026-06-09T12:10:00Z",
   "config": {
+    "NETWORK": "songbird",
     "FWD_ENDPOINT": "http://fwd:8080",
     "IDENTITY_ADDRESS": "0x...",
     "CLAIM_RECIPIENT_ADDRESS": "0x...",
@@ -300,7 +301,7 @@ would re-expand the secret surface the membrane exists to shrink.
 | `capabilities[].caller_token_env` | the env-var **name** to write the value into |
 | `capabilities[].caller_token` | **the secret value**, delivered once (a bearer token — NOT a signing key) |
 | `capabilities[].wallet_name` | the fwd wallet **name** for that capability (the importer writes it to the consumer's own `<wallet_env>`, which it knows because it governs the `capability_id`) |
-| `config` | a flat `{ENV_VAR: string}` map of the consumer's **non-secret** network config (endpoint, identity/recipient addresses, behaviour flags, timings) — written verbatim into `.env.<net>`. **NEVER a token or a signing key.** The importer **allowlists** the keys (§4.2) so the bundle cannot inject an arbitrary env var. |
+| `config` | a flat `{ENV_VAR: string}` map of the consumer's **non-secret** network config (endpoint, identity/recipient addresses, behaviour flags, timings) — written verbatim into `.env.<net>`. **MUST include the consumer's network selector** — for clif this is **`NETWORK`** (the active chain); without it clif silently defaults to flare (`cli.py:715`), so a "complete handoff" that omits it is **not** complete. **NEVER a token or a signing key.** The importer **allowlists** the keys (§4.2) so the bundle cannot inject an arbitrary env var. |
 
 ### 4.2 Import semantics (NORMATIVE)
 
