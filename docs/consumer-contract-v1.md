@@ -378,6 +378,49 @@ compat keys, but MUST carry at least these three.)
 
 ---
 
+## 6b. Adding a consumer — the minimal normative path
+
+A new consumer (`<x>`) is added via the **consumer-generic path**, never by forking
+clif's `fwd onboard` script (that is the reference consumer's turnkey deployment, not
+the abstraction). The split:
+
+**The consumer MUST implement** (clif is the reference for each — copy the *contract*,
+not the code; fwd never imports a consumer):
+
+1. **`<x> spec --json`** (§2) — self-describe its `capability_id`s
+   (`<x>/<net>/<role>`), each capability's `caller_token_env`, `wallet_name`, and the
+   compat tuple (§6). The consumer owns its shape; fwd holds no consumer-roles table.
+2. **`<x>ctl import-credentials <net> <bundle>`** (§4) — validate the v2 bundle
+   (version/consumer/network/expiry/governed-ids), allowlist the `config` keys against
+   **its own** settings fields, apply the env-injection + `*PRIVATE_KEY*` guards, write
+   its own `.env.<net>` idempotently (the same path is the rotation channel), force-pin
+   its network selector from the bundle's validated `network`, one-shot-consume on
+   success. Token VALUES never printed.
+3. **Keyless transport via `fwd-client`** (the shared library — Python or Go) for ALL
+   fwd HTTP: sign requests, broadcast-result + receipt report-back. The consumer
+   broadcasts; fwd never does.
+4. **Effect verification** — a mined tx is not success; verify the intended on-chain
+   effect of that exact tx (clif D16).
+
+**The custody side (operator-gated, per consumer):**
+
+5. Wallets via `fwdctl wallets create|import`; policy via the template path
+   (`fwdctl policy init … --merge` keeps existing networks/consumers intact).
+6. Grant + handoff: paste `<x> spec --json` into
+   **`fwdctl capability grant --approve --emit-bundle <path> --config NETWORK=<net>
+   [--config K=V …]`** — renders the custody diff for operator judgment, mints by
+   `capability_id`, emits the complete v2 bundle (pre-mint conformance gate: refuses a
+   null `wallet_name`, a missing or contradicting `NETWORK`, before any token is minted).
+7. **A new ROLE (different contract/method) is a deliberate fwd change** — a
+   `_ROLE_CONVENTION` entry + a policy template (`capability_grant.py`,
+   `cli/policy.py`), shipped through fwd's gated workflow. This is by design
+   (Invariant #6: policy content is template-driven, never consumer-supplied).
+
+Deferred pieces a new consumer does NOT need: the `provider` coordinator, the deploy
+manifest, conflict detection (§7) — those activate at N≥2 by recorded decision.
+
+---
+
 ## 7. The provider side (DESIGN — owned here, NOT BUILT; deferred until consumer #2)
 
 Everything in §7 is **design owned by this contract**, deferred per ADR-0001 §Scope

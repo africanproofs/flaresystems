@@ -38,7 +38,8 @@ The organizing axis is **trust domain**; the durable primitive is the
 
 - `fwd*` / **`fwdctl`** — **custody authority**: the only surface that mutates
   signer state (keys, policy, wallets, caller-token minting, `setClaimExecutors`).
-  (`clifwd` is retired in favour of `fwdctl`.)
+  (`fwdctl` is the canonical custody CLI — the in-container shim since fwd 0a27fd5;
+  `clifwd` remains a compatibility alias. The full in-app rename stays deferred.)
 - `clif*` / `<consumer>*` — **keyless**: builds calldata, reads chain, asks fwd
   to sign, broadcasts, reports back. Holds **no signing key, no unseal key** —
   only bearer caller tokens.
@@ -70,15 +71,23 @@ load-bearing decisions — **do not relitigate**:
 
 ## Deferred — build the seam, defer the framework
 
-Not yet built; deferred until **consumer #2** forces them (ADR-0001 §Scope):
-the **`provider`** coordinator implementation, **`consumer-contract-v1`**'s
-normative schemas/verb-lists, and the deploy **manifest**. clif's own migration
-to the bundle/import handoff is the forcing function and must land **before**
-consumer #2 — clif's **import half (`clif import-credentials`) is built and
-C6-conformant**; what remains is fwd's **bundle-emission side** (custody —
-unbuilt, gated), so the migration off the deprecated `fwd onboard --clif-env-dir`
-pattern is blocked on fwd, not clif. Until it lands the reference consumer still
-runs the deprecated pattern, or the first new consumer copies the leak.
+**The seam is BUILT and live (2026-06-13).** Both halves of the handoff ship and are
+production-proven: fwd emits the complete v2 bundle to its own outbox (`fwd onboard` for
+clif's turnkey path; **`fwdctl capability grant --emit-bundle --config NETWORK=<net> …`**
+for the consumer-generic path, with a pre-mint conformance gate) and clif's
+`import-credentials` is C6-conformant — the deprecated `--clif-env-dir` env-write is
+deleted (fwd a102) and clif runs the bundle handoff on Flare + Songbird mainnet.
+**Consumer #2 starts from the generic path (`consumer-contract-v1` §6b), never by
+forking clif's onboard.**
+
+Still deferred until **consumer #2 is named and scheduled** (ADR-0001 §Scope; the
+framework must not be abstracted from N=1): the **`provider`** coordinator
+implementation, the deploy **manifest**, cross-consumer **conflict detection**, and the
+remaining normative verb schemas (`consumer-contract-v1` §7). Additional named triggers:
+the first **off-host** consumer forces a remote handoff/nonce-bridge transport (today the
+bundle is same-host by design); a consumer whose roles don't fit the
+template+`_ROLE_CONVENTION` pattern forces the policy-template extension (a deliberate,
+operator-gated fwd change — Invariant #6).
 
 ## Commits (inherited AP doctrine)
 
