@@ -124,3 +124,39 @@ Phase-0 close; the structural decision — fsp is a custody boundary owning thes
 - The `provider` framework (`consumer-contract-v1` §7) is **built**, not deferred — consumer #2 supplies the second consumer the conflict-detector needs, and the tree's "no wallet in two consumers" invariant (ADR-0004) becomes enforceable.
 - The dual-mode setting makes the fork a safe drop-in and gives every AP Go consumer a template for incremental fwd adoption: ship in `local`, prove, flip to `fwd`, deprecate `local`.
 - fwd's typed-message registry grows by four message types; its safety model (reconstruct-and-reason, never sign-an-opaque-hash) is preserved, with `PROTOCOL_PAYLOAD` the single bounded exception.
+
+## Addendum (2026-06-13) — complete fsp sign-role set + the `fsp-voter` capability
+
+Phase 1a/1b implemented the four new fwd typed messages and verified each against the upstream Go client
+(`build_fsp_message` golden vectors; fwd at commits `a9ec8f2` + `aede961`, 953 unit tests green). That work
+**discovered signing operations ADR-0004's `fsp` tree did not list** — the tree predated the gap analysis.
+The fsp consumer's **complete** sign-role taxonomy (immutable `fsp/<net>/<role>` capability_ids) is
+therefore extended with four roles, named per the `<context>-<noun>-<verb>` convention:
+
+| role | fwd message_type | wallet (key) | cadence |
+|---|---|---|---|
+| `signing-policy-sign` | `SIGNING_POLICY` | fsp-signing (SIGNING_PK) | per-epoch |
+| `voter-registration-sign` | `VOTER_REGISTRATION` | fsp-signing (SIGNING_PK) | per-epoch |
+| `protocol-message-sign` | `PROTOCOL_PAYLOAD` | fsp-signing (SIGNING_PK) | **per-round** (submitSignatures payload, any subprotocol — FTSO/FDC) | 
+| `fastupdate-sign` | `FAST_UPDATE` | fastupdate (sortition key) | per-block (sortition) |
+
+`protocol-message-sign` is named protocol-agnostic deliberately (operator decision 2026-06-13): the same
+SIGNING_PK leg signs the submitSignatures payload for **any** subprotocol, so it is NOT `ftso-signature-*`.
+
+**Policy-generation home (`fsp-voter` capability).** `generate_policy` (`app/policy_init.py`) is the only
+renderer of policy blocks; the generic `fwdctl capability grant` path mints callers against
+already-existing policy_paths (`capability_grant.py` is parse+plan+mint only). To render the fsp voter's
+blocks **without polluting clif's `fsp` capability output** (clif rides `fsp/uptime-*`/`fsp/reward-*`
+transitionally — ADR-0004), the voter set is emitted under a **new `fsp-voter` capability** that composes
+with `fsp` (clif = `claim,fsp`; the fsp consumer = `fsp,fsp-voter`). Sequencing (operator decision):
+- **1c-i (no new ABIs):** `fsp-voter` emits the four sign `fsp_permissions` blocks above + the
+  `fastupdate-<net>` wallet; the four roles added to `_ROLE_CONVENTION`.
+- **1c-ii (needs ABIs):** the submit-tx roles (`ftso-price-submit`, `ftso-signature-submit`,
+  `fastupdate-submit`, `fdc-bitvote-submit`) — blocked on sourcing the **Submission** + **FastUpdater**
+  ABIs into the fwd registry (today it has only reward_manager / flare_systems_manager / participant_register
+  / erc20). At that point `fastupdate-<net>` also enters `fsp_self_submit` (sign + self-submit carve-out).
+
+**Open (confirm at 1c-ii against the live deployment):** fast-updates multiplicity — ADR-0004 listed
+`fastupdate-submit-{1,2,3}`, but the deployment env carries a single `FAST_UPDATES_SORTITION_PRIVATE_KEY`
+(+ `FAST_UPDATES_ACCOUNTS`). Whether that is one sortition key or three seats decides whether
+`fastupdate-*` is one role or three.
