@@ -156,7 +156,18 @@ with `fsp` (clif = `claim,fsp`; the fsp consumer = `fsp,fsp-voter`). Sequencing 
   ABIs into the fwd registry (today it has only reward_manager / flare_systems_manager / participant_register
   / erc20). At that point `fastupdate-<net>` also enters `fsp_self_submit` (sign + self-submit carve-out).
 
-**Open (confirm at 1c-ii against the live deployment):** fast-updates multiplicity — ADR-0004 listed
-`fastupdate-submit-{1,2,3}`, but the deployment env carries a single `FAST_UPDATES_SORTITION_PRIVATE_KEY`
-(+ `FAST_UPDATES_ACCOUNTS`). Whether that is one sortition key or three seats decides whether
-`fastupdate-*` is one role or three.
+**Resolved (2026-06-13, from the deployment compose env-mapping — the authoritative source for key
+topology).** The fast-updates proof is signed by `SIGNING_PK` (`SIGNING_PRIVATE_KEY=${SIGNING_PK}`, = the
+`fsp-signing` wallet); the three `FAST_UPDATES_ACCOUNTS` are **EVM-only** `submitUpdates` tx accounts; the
+BN254 `FAST_UPDATES_SORTITION_PRIVATE_KEY` is **local-only** (computes randomness, never signs, never fwd).
+So the fwd model is **one `fastupdate-sign` on `fsp-signing` + three EVM-only `fastupdate-submit-{1,2,3}`** —
+NO cross-domain fast-update wallet and NO `fast_updater` carve-out. ADR-0004's `fastupdate-submit-{1,2,3}`
+referred to these three tx accounts; the proof-sign is a single role, not three. (Corrected in fwd
+`86479b6`, superseding `2a23dcf`'s erroneous 3-seat model — the multiplicity was wrongly inferred from the
+on-chain identity list instead of the deployment's key wiring.) Also resolved: system-sender =
+`SIGNING_PK` (`SYSTEM_CLIENT_SENDER_PRIVATE_KEY=${SIGNING_PK}`), consistent with the existing FSM
+self-submit carve-out.
+
+**Phase-1 follow-on (OI-2, open):** the system-client finalizer is enabled (`enabled_finalizer = true`) →
+a `relay-submit` capability (the Relay contract finalization tx) is needed, on whichever existing key the
+finalizer uses (no separate key env var — confirm which when building it). Not yet built in Phase 1.
