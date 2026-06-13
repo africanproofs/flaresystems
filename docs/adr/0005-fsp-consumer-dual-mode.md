@@ -168,6 +168,13 @@ on-chain identity list instead of the deployment's key wiring.) Also resolved: s
 `SIGNING_PK` (`SYSTEM_CLIENT_SENDER_PRIVATE_KEY=${SIGNING_PK}`), consistent with the existing FSM
 self-submit carve-out.
 
-**Phase-1 follow-on (OI-2, open):** the system-client finalizer is enabled (`enabled_finalizer = true`) →
-a `relay-submit` capability (the Relay contract finalization tx) is needed, on whichever existing key the
-finalizer uses (no separate key env var — confirm which when building it). Not yet built in Phase 1.
+**Phase-1 follow-on (OI-2, RESOLVED + built — fwd `a0dfe47`).** The system-client finalizer
+(`enabled_finalizer = true`) submits to the **Relay** contract via the `relay()` method, signing with
+`SigningPolicyPrivateKey` (= the `fsp-signing` wallet) — so `fsp-signing` is cross-domain over Relay too.
+Built as the `relay-submit` role (Relay `relay()`, `max_value_wei=0`) on `fsp-signing`, with `relay()`
+added to `_FSP_SELF_SUBMIT_SHAPES` (fsp-signing's exempt EVM shapes = FSM signUptimeVote/signRewards AND
+relay; carve-out independently tamper-verified to stay bounded). Relay addresses (FlareContractRegistry):
+flare `0xCcF30790A93F15e24EB909548a2C58a9b0a7FBd4`, songbird `0xCB86E8Be709001e01897Bf59847406853da8f14b`.
+**This completes fwd's capability surface — every key/operation in the live flare-system deployment now maps
+to a built, unit-proven fwd capability.** The keyless Go client (`fwd-client/go` `2fa4553`) models all six
+FSP message types; the Python `fwd-client` mirror is a lockstep follow-on (no consumer needs it yet).
