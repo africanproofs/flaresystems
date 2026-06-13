@@ -380,6 +380,13 @@ compat keys, but MUST carry at least these three.)
 
 ## 6b. Adding a consumer — the minimal normative path
 
+> **Where the boundary is drawn — see ADR-0004.** A consumer is a *custody boundary* (a
+> shared key-set + operational identity), NOT a deployment container or a repo: **shared
+> signing key ⟹ same consumer.** ADR-0004 fixes the generating principle and the target
+> tree (`fsp` = the protocol voter incl. FDC; `claim` = reward harvesting; `fdc-suite-deployment`
+> is verifier infra, not a consumer). This section covers *what* a conformant consumer must
+> implement; ADR-0004 covers *whether the new workload is its own consumer at all*.
+
 A new consumer (`<x>`) is added via the **consumer-generic path**, never by forking
 clif's `fwd onboard` script (that is the reference consumer's turnkey deployment, not
 the abstraction). The split:
