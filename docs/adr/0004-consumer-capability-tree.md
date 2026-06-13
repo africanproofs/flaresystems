@@ -40,6 +40,13 @@ Five corollaries decide every boundary:
 5. **Build a consumer only when its key actually migrates to fwd.** The tree below is the *target*;
    unbuilt branches are placeholders with named triggers, not a backlog (the ADR-0001 deferral
    discipline, unchanged).
+6. **Role tokens are `<context>-<noun>-<verb>`, fully self-describing** (verb ∈ {`claim`, `sign`,
+   `submit`}, verb last) — readable in isolation (the role appears bare in `_ROLE_CONVENTION`, policy
+   paths, audit rows, the bundle). The verb disambiguates operations that share a noun: reward
+   *claiming* (`ftso-reward-claim`) vs reward *signing* (`reward-distribution-sign`). FSP signing is
+   split **per message-type** for least-privilege — `fsp_permissions.message_types` pins one caller to
+   UPTIME and another to REWARD_DISTRIBUTION, so an uptime token structurally cannot sign a reward
+   distribution (one capability = one message-type/method = one caller token).
 
 ## The tree
 
@@ -50,19 +57,24 @@ fwd  — custody authority: holds every HOT EVM key (sealed AES-256-GCM), signs,
 │            ONE operational identity: the EntityManager-registered hot key-set. Owns ALL protocol
 │            participation — FTSO, the FSP base layer, AND FDC (shared voter key).
 │   roles per net {flare, songbird} — illustrative; fsp self-describes the exact set via `fsp spec --json`:
-│   ├─ fsp/<net>/ftso-submit        Submission.submit1/submit2            (Submit key 0x366B…)
-│   ├─ fsp/<net>/ftso-sign-submit   Submission.submitSignatures           (SubmitSignatures key 0x81ac…)
-│   ├─ fsp/<net>/protocol-sign      sign-fsp-message — FTSO + FDC merkle   (SigningPolicy key 0x3FA0…)  ← FDC lives HERE
-│   ├─ fsp/<net>/uptime-sign        sign-fsp-message — UPTIME              (SigningPolicy key)
-│   ├─ fsp/<net>/uptime-submit      FlareSystemsManager.signUptimeVote     (gas sender)
-│   ├─ fsp/<net>/rewards-sign       sign-fsp-message — REWARD_DISTRIBUTION (SigningPolicy key)
-│   ├─ fsp/<net>/rewards-submit     FlareSystemsManager.signRewards        (gas sender)
-│   └─ fsp/<net>/fastupdate-{1,2,3} FastUpdater.submitUpdates              (FastUpdates-1/2/3 keys)
+│   ├─ fsp/<net>/ftso-price-submit          Submission.submit1/submit2             (Submit key 0x366B…)
+│   ├─ fsp/<net>/ftso-signature-submit      Submission.submitSignatures            (SubmitSignatures key 0x81ac…)
+│   ├─ fsp/<net>/uptime-vote-sign           sign-fsp-message — UPTIME              (SigningPolicy key 0x3FA0…)
+│   ├─ fsp/<net>/uptime-vote-submit         FlareSystemsManager.signUptimeVote     (gas sender)
+│   ├─ fsp/<net>/reward-distribution-sign   sign-fsp-message — REWARD_DISTRIBUTION (SigningPolicy key)
+│   ├─ fsp/<net>/reward-distribution-submit FlareSystemsManager.signRewards        (gas sender)
+│   ├─ fsp/<net>/fdc-bitvote-submit         FDC bitvote (shared voter key)         ← FDC lives HERE
+│   └─ fsp/<net>/fastupdate-submit-{1,2,3}  FastUpdater.submitUpdates              (FastUpdates-1/2/3 keys)
 │
 ├─ claim/    reward HARVESTER — clif, rescoped (Python). Orthogonal to voting; distinct claim-executor
-│            key; recipient-pinned. NO foundation repo does this — AP's durable, non-overlapping role.
-│   ├─ claim/<net>/ftso-reward      RewardManager.claim                    (claim executor 0x0A33…, recipient pinned)
-│   └─ claim/<net>/validator-reward staking/validator reward (EVM side)    [future]
+│            key; recipient-pinned. NO foundation repo does the claim. The 4 FSP roles ride here
+│            TRANSITIONALLY (same tokens migrate to fsp/ on a prefix swap) until the fsp consumer lands.
+│   ├─ claim/<net>/ftso-reward-claim           RewardManager.claim                    (claim executor 0x0A33…, recipient pinned)
+│   ├─ claim/<net>/uptime-vote-sign            sign-fsp-message — UPTIME              [transitional → fsp]
+│   ├─ claim/<net>/uptime-vote-submit          FlareSystemsManager.signUptimeVote     [transitional → fsp]
+│   ├─ claim/<net>/reward-distribution-sign    sign-fsp-message — REWARD_DISTRIBUTION [transitional → fsp]
+│   ├─ claim/<net>/reward-distribution-submit  FlareSystemsManager.signRewards        [transitional → fsp]
+│   └─ claim/<net>/validator-reward-claim      staking/validator reward (EVM side)    [future]
 │
 └─ deferred — built only when the key actually moves to fwd (named triggers, not a backlog):
    ├─ register/<net>/…   ParticipantRegister txs   (apregister / apcli .env PRIVATE_KEY → fwd)
@@ -81,15 +93,16 @@ fwd  — custody authority: holds every HOT EVM key (sealed AES-256-GCM), signs,
 
 ## What this resolves about clif
 
-- **clif → the `claim` consumer.** Its durable, non-overlapping identity is reward harvesting. The
-  rescope renames the consumer-identity string (`clif`→`claim`) + the capability prefix + `.clif-state/`
-  + the idempotency-key prefixes + the lock path, and **retires the `fsp-sign`/`fsp-submit` roles and
-  the `clif/fsp.py` module.** The GitHub repo MAY keep the name "clif" — only the consumer-identity
-  string is load-bearing; repo rename is cosmetic.
-- **clif's FSP roles → `fsp`.** The keyless flare-system-client subsumes them; the `fwd-client` **Go**
-  port exists precisely for this Go consumer. The signing-policy key then lives in fwd **once** — today
-  it is duplicated (flare-system-client keystore *and* fwd), a half-finished migration that `fsp`
-  completes.
+- **clif → the `claim` consumer.** Its durable, non-overlapping identity is reward harvesting
+  (`ftso-reward-claim`). The rescope renames the consumer-identity string (`clif`→`claim`) + the
+  capability prefix, and **splits FSP signing into four least-privilege roles**
+  (`uptime-vote-{sign,submit}`, `reward-distribution-{sign,submit}`) — each pinned to one message-type
+  or FSM method in the generated policy. They ride transitionally under `claim/` while clif is the only
+  FSP signer. The GitHub repo MAY keep the name "clif"; only the consumer-identity string is load-bearing.
+- **clif's FSP roles → `fsp`.** When the keyless flare-system-client lands, the four FSP roles migrate
+  to `fsp/<net>/…` (same tokens, a `claim/`→`fsp/` prefix swap — no re-split) and are revoked from
+  `claim`. The signing-policy key then lives in fwd **once** — today it is duplicated
+  (flare-system-client keystore *and* fwd), a half-finished migration that `fsp` completes.
 
 ## Why now
 
