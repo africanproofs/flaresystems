@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "provider"
+version = "0.1.0"
+description = "Neutral runbook coordinator for the fwd ecosystem — reads, classifies, plans only"
+authors = ["African Proofs <ops@proofs.africa>"]
+readme = "README.md"
+packages = [{ include = "provider" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+typer = ">=0.12"
+pydantic = ">=2.0"
+pyyaml = ">=6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0"
+
+[tool.poetry.scripts]
+provider = "provider.cli:app"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

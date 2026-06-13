@@ -1,0 +1,31 @@
+# provider-manifest.yaml — the source of truth for which consumers and networks exist.
+#
+# The manifest governs WHICH consumers/networks exist and their compat pins.
+# It does NOT list roles — roles are owned by each consumer's `spec --json`.
+# fwd policy owns per-capability authorization.
+#
+# Schema: consumer-contract-v1 §7.1
+
+version: 1
+networks:
+  - flare
+  - songbird
+
+consumers:
+  - ref: fsp
+    # fsp = the protocol voter: FTSO/FDC/FastUpdates signing and submission.
+    # Custody boundary: flare-system-client + fast-updates (same key set).
+    networks: [flare, songbird]
+    compat:
+      fwd_contract_expected: "v1.1.0a69"
+      # fsp does not carry fwd_client (Go consumers use the Go fwd-client port)
+      fsp: ">=0.1.0"
+
+  - ref: claim
+    # claim = reward harvesting (FTSO FEE + DIRECT claims) + FSP message signing.
+    # Formerly the 'clif' consumer; renamed to 'claim' per ADR-0004.
+    networks: [flare, songbird]
+    compat:
+      fwd_contract_expected: "v1.1.0a69"
+      fwd_client: ">=0.1.3"
+      claim: ">=0.5.38"
