@@ -49,6 +49,22 @@ fwd runs on the FSP-stack host; the bundle handoff and signing are loopback. Thi
 failure mode** and keeps the **off-host transport deferred** (ADR-0001 §Scope) — the first genuinely
 off-host consumer re-triggers it.
 
+**D1 sharpened — co-location is custody-mandatory, not just latency-preferred (grounded 2026-06-14).**
+The original framing read co-location as a latency choice. Grounding the friendly-adversary's topology
+finding against `policy_init.py` shows a stronger constraint: **the `fsp-signing-<net>` wallet IS the
+SIGNING_PK**, and clif's transitional FSP roles (`claim/…` uptime/reward sign+submit, ADR-0004) already
+custody that *same* key in the live l-desktop fwd. A *second* fwd co-located on a separate voter host
+would put SIGNING_PK in **two sealed masters** — two attack surfaces, two rotation/backup points — which
+breaks the consumer-as-custody-boundary invariant (ADR-0004: a shared key ⟹ one custodian). Therefore:
+- **Exactly one fwd** holds `claimer-<net>` + `fsp-signing-<net>` + `fsp-sender-<net>` and serves **both**
+  the `claim` (clif) and `fsp` consumers via distinct caller tokens. Co-location is required so that the
+  one fwd is loopback-local to the voter; it is not satisfiable by a second voter-host fwd.
+- The **W3 `claim → fsp` prefix migration must land with or before the fsp onboard**, so `fsp-signing` has
+  exactly one custodian at the moment fsp begins signing per-round (no window where both `claim/…` and
+  `fsp/…` callers authorize the same wallet across two fwds).
+- The remaining decision is purely **which single host** runs {FSP voter + the one fwd + clif}. That host
+  choice — not the custody topology — is the open operator gate; picking it unblocks the Phase-4 canary.
+
 ### D2 — Availability: single co-located fwd, prove on Songbird; HA deferred-pending-canary
 The starting posture is **one** co-located fwd with supervisor auto-restart and hard monitoring/alerting
 on sign latency + availability. The all-four-keys migration runs on **Songbird first**; the real miss-rate
