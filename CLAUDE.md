@@ -12,24 +12,31 @@
 |---|---|---|---|
 | `fwd/` | zero-egress signer — keys, policy, wallets, caller tokens, audit | **custody authority** | local |
 | `fwd-client/` | shared keyless client lib (Python + Go) | keyless transport | `github.com/africanproofs/fwd-client` |
-| `clif/` | keyless FTSO reward claimer + FSP signer — the **reference consumer** | keyless | `github.com/africanproofs/clif` |
+| `clif/` | keyless FTSO reward claimer + FSP signer — the **reference consumer** (consumer #1 = `claim`) | keyless | `github.com/africanproofs/clif` |
+| `fsp/` | **consumer #2** wrapper — declares the fsp capability set (`fsp spec`, conformant to fwd's `parse_spec`) + `import-credentials` for the two forked Go voters; holds no keys, signs nothing | keyless / onboard | `github.com/africanproofs/fsp` |
+| `provider/` | neutral runbook **coordinator** (ADR-0001 §7) — manifest + three-way `provider doctor` + cross-consumer conflict detection + `verify-consumer`; reads/classifies/plans, never custody | coordination | **this repo** (umbrella-tracked) |
 | `docs/adr/` | cross-project architecture decisions for the fwd ecosystem | coordination | **this repo** |
 
-Members are **independent git repositories** with their own remotes and history.
-They live inside this folder for co-location and are **gitignored from the
-umbrella by design** — each is tracked only by its own `.git`. The umbrella
-commits **only** `docs/adr/` (and, when they land, the deferred coordination
-artifacts below).
+The `fsp` consumer's actual signing services are the two AP **forks** of the Flare
+voter — `github.com/africanproofs/{flare-system-client, fast-updates}` — each with a
+dual-mode `Signer` seam (`local` = byte-identical to upstream, `fwd` = keyless with
+per-capability token routing). They live outside this umbrella, under `africanproofs`.
+
+Members (`fwd`, `fwd-client`, `clif`, `fsp`) are **independent git repositories** with
+their own remotes/history, co-located here and **gitignored from the umbrella**. The
+umbrella itself commits the **coordination layer — `docs/adr/` + `provider/`** (provider
+is umbrella-*tracked*, not a member).
 
 ## THE working rule — never sweep a member into an umbrella commit
 
 Each member is its **own repo with its own CLAUDE.md**. To work on `fwd`,
-`fwd-client`, or `clif`: navigate **into** that member directory, read **its**
+`fwd-client`, `clif`, or `fsp`: navigate **into** that member directory, read **its**
 CLAUDE.md, and commit **in that repo**. The members are gitignored here on
 purpose; an umbrella commit must contain coordination-layer files only
-(`docs/adr/`, future `provider`/`consumer-contract-v1`/manifest). If a `git
-status` at the umbrella root shows member-internal files staged, STOP — you are
-in the wrong repo. The umbrella never carries a member's source.
+(`docs/adr/`, `provider/`, `consumer-contract-v1`/manifest). If a `git
+status` at the umbrella root shows a **member's** internal files staged (e.g. `fsp/…`,
+`clif/…`), STOP — you are in the wrong repo. (`provider/` IS umbrella-tracked — that's
+expected.) The umbrella never carries a member's source.
 
 ## The trust-domain membrane (ADR-0001 — the binding contract)
 
@@ -69,25 +76,36 @@ load-bearing decisions — **do not relitigate**:
 - **Manifest is truth; cursor is cache** — the runbook cursor is re-derivable
   from ground truth, never authority.
 
-## Deferred — build the seam, defer the framework
+## Status — consumer #2 + the framework core are now BUILT (was "Deferred")
 
-**The seam is BUILT and live (2026-06-13).** Both halves of the handoff ship and are
-production-proven: fwd emits the complete v2 bundle to its own outbox (`fwd onboard` for
-clif's turnkey path; **`fwdctl capability grant --emit-bundle --config NETWORK=<net> …`**
-for the consumer-generic path, with a pre-mint conformance gate) and clif's
-`import-credentials` is C6-conformant — the deprecated `--clif-env-dir` env-write is
-deleted (fwd a102) and clif runs the bundle handoff on Flare + Songbird mainnet.
-**Consumer #2 starts from the generic path (`consumer-contract-v1` §6b), never by
+**The seam is live AND the framework is built (2026-06-13/14).** The handoff ships both
+ways (`fwd onboard` for clif's turnkey path; `fwdctl capability grant --emit-bundle
+--config NETWORK=<net> …` for the consumer-generic path, with a pre-mint conformance
+gate). **Consumer #2 started from the generic path (`consumer-contract-v1` §6b), NOT by
 forking clif's onboard.**
 
-Still deferred until **consumer #2 is named and scheduled** (ADR-0001 §Scope; the
-framework must not be abstracted from N=1): the **`provider`** coordinator
-implementation, the deploy **manifest**, cross-consumer **conflict detection**, and the
-remaining normative verb schemas (`consumer-contract-v1` §7). Additional named triggers:
-the first **off-host** consumer forces a remote handoff/nonce-bridge transport (today the
-bundle is same-host by design); a consumer whose roles don't fit the
-template+`_ROLE_CONVENTION` pattern forces the policy-template extension (a deliberate,
-operator-gated fwd change — Invariant #6).
+**Consumer #2 = `fsp`** (the keyless flare-system stack) is built end to end — both forked
+Go voters with the dual-mode `Signer` seam, the `fsp/` wrapper (`spec` conformant to fwd's
+`parse_spec`), and fwd's complete fsp capability set + bounded self-submit carve-outs,
+**deployed on l-desktop** (`c916446`), backward-compatible (clif unaffected). The once-
+deferred **framework is now built**: the **`provider`** coordinator CORE — manifest,
+three-way `provider doctor` + the 4 drift types, cross-consumer conflict detection,
+`verify-consumer` (C2/C3/C7/C8). See memory `fsp-consumer-build-complete.md`.
+
+**Still remaining (gated / integration / loose ends — NOT a fresh build):**
+- The **live canary** — onboard fsp (`fwdctl capability grant` against `fsp spec`) → flip
+  `backend=fwd` on Songbird → Flare. Operator-gated; runbook
+  `~/.claude/plans/fsp-canary-runbook.md`; fwd deploy procedure = memory
+  `fwd-reinstall-preserves-custody.md`.
+- **Off-host transport** — fwd is deployed on l-desktop, but the FSP voter runs elsewhere;
+  if not co-located, **fsp is the first off-host consumer** (the named ADR-0001 trigger) and
+  forces the remote handoff / nonce-bridge. **Resolve the FSP-voter host BEFORE the fsp
+  onboard** — memory `fsp-canary-topology-blocker.md`.
+- provider **live adapters** (real fwd-granted + consumer reads — stubbed), `fspctl`, the
+  remaining `provider` verbs (`plan`/`next`/`verify`) + the C1/C4/C5/C6/C9 runtime checks,
+  and the fwd-client **Python** lockstep mirror.
+- The policy-template extension still fires only if a future consumer's roles don't fit the
+  template+`_ROLE_CONVENTION` pattern (operator-gated fwd change — Invariant #6).
 
 ## Commits (inherited AP doctrine)
 
