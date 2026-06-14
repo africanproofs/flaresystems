@@ -168,9 +168,11 @@ def _check_c3(consumer: str, network: str | None = None) -> CheckResult:
             f"spec rendered {len(output.splitlines())} lines with approve/reject markers"
         )
     except FileNotFoundError:
+        # CLI absent from PATH is env-unavailability, NOT non-conformance — SKIP, don't FAIL
+        # (a missing CLI must not make a consumer look non-conformant; it just can't be run here).
         return CheckResult(
-            "C3", "custody diff renders", CheckStatus.FAIL,
-            f"consumer CLI {consumer!r} not found in PATH"
+            "C3", "custody diff renders", CheckStatus.SKIPPED,
+            f"consumer CLI {consumer!r} not on PATH (live render check skipped — runtime)"
         )
     except subprocess.TimeoutExpired:
         return CheckResult(

@@ -155,6 +155,10 @@ with `fsp` (clif = `claim,fsp`; the fsp consumer = `fsp,fsp-voter`). Sequencing 
   `fastupdate-submit`, `fdc-bitvote-submit`) — blocked on sourcing the **Submission** + **FastUpdater**
   ABIs into the fwd registry (today it has only reward_manager / flare_systems_manager / participant_register
   / erc20). At that point `fastupdate-<net>` also enters `fsp_self_submit` (sign + self-submit carve-out).
+  **[RESOLVED 2026-06-13 — 1c-ii is BUILT: the Submission + FastUpdater (and VoterRegistry, Relay) ABIs were
+  sourced and `policy_init` emits `ftso-price-submit` / `ftso-signature-submit` / `fastupdate-submit-{1,2,3}`
+  (+ the epoch-submit and `relay-submit` roles) with the bounded self-submit carve-out. This "needs ABIs"
+  gate no longer blocks anything — see the OI-2 and epoch-submit addenda below.]**
 
 **Resolved (2026-06-13, from the deployment compose env-mapping — the authoritative source for key
 topology).** The fast-updates proof is signed by `SIGNING_PK` (`SIGNING_PRIVATE_KEY=${SIGNING_PK}`, = the
