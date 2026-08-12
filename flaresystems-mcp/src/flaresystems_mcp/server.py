@@ -24,8 +24,10 @@ mcp_server = fastmcp.FastMCP(
     "flaresystems",
     instructions=(
         "flaresystems MCP: the agent interface to AP's fwd+clif signing/funding system "
-        "(ADR-0006). OBSERVE (read, broad): funding_health, epoch_status, clif_doctor, "
-        "epoch_signing_progress. ACT (membraned, bounded): funding_propose validates a "
+        "(ADR-0006). OBSERVE (read, broad): funding_health, registration_status (the "
+        "RE423 detector — are we in the registered voter set for the current/next reward "
+        "epoch?), epoch_status, clif_doctor, epoch_signing_progress. ACT (membraned, "
+        "bounded): funding_propose validates a "
         "gas-funding plan against hard bounds and executes NOTHING (the review step); "
         "funding_apply validates then executes the accepted subset keyless — every line "
         "is rejected unless it is a known account, ≤ the per-tx cap, would NOT push the "
@@ -67,6 +69,20 @@ def epoch_status(network: str) -> dict:
     degraded flag. exit_code 2 = degraded/dead, 3 = no daemon state. Read-only."""
     try:
         return _envelope(_bridge.run(["epoch", "status"], network=network))
+    except BridgeError as exc:
+        return _err(str(exc))
+
+
+@mcp_server.tool()
+def registration_status(network: str) -> dict:
+    """Are we REGISTERED, and ready to register, for the current + next reward epoch?
+    The RE423 detector — reads the on-chain registered voter set + registration window.
+    severity CRIT ⇒ a LIVE exclusion (not in the current registered set — zero rewards
+    this epoch) or a prereq that will fail the next registerVoter (gas below floor / 0
+    vote power / entity gap); WARN ⇒ next window open, not yet registered. Read-only,
+    never signs. A read error is CRIT, never green (the RE423 blind spot)."""
+    try:
+        return _envelope(_bridge.run(["registration", "status"], network=network))
     except BridgeError as exc:
         return _err(str(exc))
 

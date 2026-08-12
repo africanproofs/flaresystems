@@ -23,6 +23,8 @@ agent — or a human via an MCP client — can call, **without ever holding cust
 
 **OBSERVE** (read):
 - `funding_health(network)` — balances vs bands, ap-funder runway, severity.
+- `registration_status(network)` — the RE423 detector: are we in the on-chain registered
+  voter set for the current/next reward epoch, and are the prereqs green? CRIT = live exclusion.
 - `epoch_status(network)` — reward-epoch/phase, degraded flag.
 - `clif_doctor(network)` — fwd reachability, capabilities (names only), contract drift.
 - `epoch_signing_progress(network, epoch?)` — signed % vs threshold, our-vote-on-chain.
