@@ -15,6 +15,7 @@
 | `clif/` | keyless FTSO reward claimer + FSP signer — the **reference consumer** (consumer #1 = `claim`) | keyless | `github.com/africanproofs/clif` |
 | `fsp/` | **consumer #2** wrapper — declares the fsp capability set (`fsp spec`, conformant to fwd's `parse_spec`) + `import-credentials` for the two forked Go voters; holds no keys, signs nothing | keyless / onboard | `github.com/africanproofs/fsp` |
 | `provider/` | neutral runbook **coordinator** (ADR-0001 §7) — manifest + three-way `provider doctor` + cross-consumer conflict detection + `verify-consumer`; reads/classifies/plans, never custody | coordination | **this repo** (umbrella-tracked) |
+| `flaresystems-mcp/` | agent-native **MCP surface** (ADR-0006) — OBSERVE reads + the membraned funding ACT tools; execs the already-scoped clif containers, **holds no keys/tokens**, fwd policy is the final gate; `funding_apply` opt-in via `FLARESYSTEMS_MCP_ALLOW_APPLY` | coordination | **this repo** (umbrella-tracked) |
 | `docs/adr/` | cross-project architecture decisions for the fwd ecosystem | coordination | **this repo** |
 
 The `fsp` consumer's actual signing services are the two AP **forks** of the Flare

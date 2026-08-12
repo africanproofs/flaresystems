@@ -93,8 +93,27 @@ execute-and-verify; the only new thing an interface needs is a validated front d
   health --json`. Live read-only reject/JSON/exit-code proof on Flare prod; execute path shares the
   mainnet-proven `_execute_topup`. 338 clif tests green.
 - **Phase 3 — `flaresystems-mcp`.** Wrap the Phase-1 reads + `funding.propose`/`apply` as MCP tools;
-  scoped tokens; reuse flarestack reads. ⏭️ **Next.**
+  scoped tokens; reuse flarestack reads. ✅ **DONE (2026-08-12).** `flaresystems/flaresystems-mcp/`
+  (FastMCP, umbrella-tracked like `provider/`; registered in root `.mcp.json` as `flaresystems`).
+  Tools: `funding_health`, `epoch_status`, `clif_doctor`, `epoch_signing_progress` (OBSERVE);
+  `funding_propose`, `funding_apply` (ACT). 17 tests; live-smoked against the running containers on
+  both nets. See the **transport amendment** below.
 - **Phase 4 — (out of scope here)** attach an agent; it merely consumes this surface.
+
+### Transport amendment to §5 (2026-08-12, from the Phase-3 build)
+
+§5 envisioned `flaresystems-mcp` *holding the scoped `funding.apply` token* and reaching fwd directly.
+The build found a hard constraint that makes a **stronger** posture both necessary and available:
+`clif epoch status` reads the daemon's on-disk `CLIF_STATE_DIR`, which lives **inside** the clif
+container — a separate `clif` process cannot see it. So every tool is a `docker exec` into the
+already-deployed, already-scoped clif container. Consequence: **the MCP server holds NO keys and NO
+tokens at all** — the read tokens and the scoped funding token remain in the container's env; fwd's
+policy is still the independent final gate (§3/§58 fully satisfied — "cannot exceed fwd's policy and
+holds no key" — and then some). New residual it introduces: the server invokes the local `docker`
+CLI, so it is a **local, operator-launched stdio server** (the Docker socket is the operator's own
+privilege on their own host), not a remotely-exposed one. `funding_apply` is additionally hard-off
+unless `FLARESYSTEMS_MCP_ALLOW_APPLY=true`, so a stray server cannot move value. This does not
+relitigate §1–§4 (the tiers, the membrane, propose+apply); it refines only §5's transport.
 
 ## Consequences / non-goals
 
