@@ -26,7 +26,8 @@ mcp_server = fastmcp.FastMCP(
         "flaresystems MCP: the agent interface to AP's fwd+clif signing/funding system "
         "(ADR-0006). OBSERVE (read, broad): funding_health, registration_status (the "
         "RE423 detector — are we in the registered voter set for the current/next reward "
-        "epoch?), epoch_status, clif_doctor, epoch_signing_progress. ACT (membraned, "
+        "epoch?), observe_status (per-block FTSO participation — on-time submit/reveal + reveal-"
+        "offence detection), epoch_status, clif_doctor, epoch_signing_progress. ACT (membraned, "
         "bounded): funding_propose validates a "
         "gas-funding plan against hard bounds and executes NOTHING (the review step); "
         "funding_apply validates then executes the accepted subset keyless — every line "
@@ -83,6 +84,19 @@ def registration_status(network: str) -> dict:
     never signs. A read error is CRIT, never green (the RE423 blind spot)."""
     try:
         return _envelope(_bridge.run(["registration", "status"], network=network))
+    except BridgeError as exc:
+        return _err(str(exc))
+
+
+@mcp_server.tool()
+def observe_status(network: str) -> dict:
+    """The rolling per-voting-round FTSO participation health (the per-block observer). Are AP's
+    own submit/submitSignatures addresses participating on-chain each ~90s round, on-time, with
+    the reveal matching the commit? severity CRIT = a reveal offence, sustained non-participation
+    (<90% clean), a stale/dead engine, or a read error; WARN = an isolated miss or warming up.
+    Read-only, never signs."""
+    try:
+        return _envelope(_bridge.run(["observe", "status"], network=network, observe=True))
     except BridgeError as exc:
         return _err(str(exc))
 

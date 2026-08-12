@@ -66,6 +66,7 @@ class ClifBridge:
     docker: str = "docker"
     read_container: str = "clif-epoch-{net}"
     fund_container: str = "clif-fund-{net}"
+    observe_container: str = "clif-observe-{net}"
     networks: tuple[str, ...] = _DEFAULT_NETWORKS
     timeout: float = 90.0
     allow_apply: bool = False
@@ -80,6 +81,7 @@ class ClifBridge:
             docker=os.environ.get("FLARESYSTEMS_MCP_DOCKER", "docker"),
             read_container=os.environ.get("FLARESYSTEMS_MCP_READ_CONTAINER", "clif-epoch-{net}"),
             fund_container=os.environ.get("FLARESYSTEMS_MCP_FUND_CONTAINER", "clif-fund-{net}"),
+            observe_container=os.environ.get("FLARESYSTEMS_MCP_OBSERVE_CONTAINER", "clif-observe-{net}"),
             networks=tuple(n.strip() for n in nets.split(",") if n.strip()) if nets else _DEFAULT_NETWORKS,
             timeout=float(os.environ.get("FLARESYSTEMS_MCP_TIMEOUT", "90")),
             allow_apply=os.environ.get("FLARESYSTEMS_MCP_ALLOW_APPLY", "false").lower() == "true",
@@ -91,11 +93,19 @@ class ClifBridge:
                 f"unknown/disabled network {network!r}; configured: {', '.join(self.networks)}"
             )
 
-    def run(self, args: Sequence[str], *, network: str, fund: bool = False) -> ClifResult:
-        """Exec `clif <args> --json` in the network's container. `fund=True` routes to
-        the fund container (funding token). Parses stdout JSON regardless of exit code."""
+    def run(
+        self, args: Sequence[str], *, network: str, fund: bool = False, observe: bool = False
+    ) -> ClifResult:
+        """Exec `clif <args> --json` in the network's container. `fund=True` routes to the fund
+        container (holds the funding token); `observe=True` routes to the observe container
+        (holds the engine's rolling status file — the observer's state is not recomputable on
+        demand). Parses stdout JSON regardless of exit code."""
         self._check_network(network)
-        template = self.fund_container if fund else self.read_container
+        template = (
+            self.observe_container if observe
+            else self.fund_container if fund
+            else self.read_container
+        )
         container = template.format(net=network)
         cmd = [self.docker, "exec", container, "clif", *args, "--json"]
         code, out, errtxt = self.runner(cmd, self.timeout)
