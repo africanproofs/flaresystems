@@ -81,13 +81,19 @@ execute-and-verify; the only new thing an interface needs is a validated front d
 
 ## Phasing
 
-- **Phase 0 — this ADR** (the contract). Done at Accepted.
+- **Phase 0 — this ADR** (the contract). ✅ Done at Accepted (2026-08-12).
 - **Phase 1 — CLI `--json` completeness.** Every OBSERVE capability emits structured JSON (clif: `fund
   health`, `epoch status`, `doctor` + gaps; fwdctl read commands). The MCP layer is thin over this.
+  🟡 **Partial (clif v0.5.46): `fund health --json` shipped.** Remaining: `epoch status`, `doctor`,
+  fwdctl read commands.
 - **Phase 2 — the funding membrane.** `clif fund propose` + `clif fund apply --plan <json>` — the
   validated executor. The one ACT capability; small extension of `run_funding`.
+  ✅ **DONE + DEPLOYED (clif v0.5.46, 2026-08-12).** `validate_plan()`/`apply_plan()` in
+  `clif/funding.py`; `fund propose` (validate-only) + `fund apply` (validate+execute keyless) + `fund
+  health --json`. Live read-only reject/JSON/exit-code proof on Flare prod; execute path shares the
+  mainnet-proven `_execute_topup`. 338 clif tests green.
 - **Phase 3 — `flaresystems-mcp`.** Wrap the Phase-1 reads + `funding.propose`/`apply` as MCP tools;
-  scoped tokens; reuse flarestack reads.
+  scoped tokens; reuse flarestack reads. ⏭️ **Next.**
 - **Phase 4 — (out of scope here)** attach an agent; it merely consumes this surface.
 
 ## Consequences / non-goals
