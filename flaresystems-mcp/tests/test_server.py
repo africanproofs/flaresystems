@@ -16,8 +16,14 @@ class FakeBridge:
         self._raise = raise_exc
         self.calls: list[tuple] = []
 
-    def run(self, args, *, network, fund=False):
+    def run(self, args, *, network, fund=False, observe=False):
         self.calls.append((tuple(args), network, fund))
+        if self._raise:
+            raise self._raise
+        return self._result
+
+    def run_fwd(self, args):
+        self.calls.append((tuple(args), "fwd", False))
         if self._raise:
             raise self._raise
         return self._result
@@ -41,6 +47,13 @@ def test_bridge_error_becomes_error_dict(patch_bridge):
     patch_bridge(FakeBridge(raise_exc=BridgeError("container down")))
     out = server.epoch_status("flare")
     assert out["ok"] is False and "container down" in out["error"]
+
+
+def test_fwd_status_wraps_health(patch_bridge):
+    b = patch_bridge(FakeBridge(result=ClifResult(data={"master": "ok", "fwd": "ok"}, exit_code=0)))
+    out = server.fwd_status()
+    assert out["ok"] is True and out["data"]["master"] == "ok"
+    assert b.calls[0][0] == ("health",)  # routed through run_fwd(["health"])
 
 
 def test_signing_progress_passes_epoch(patch_bridge):

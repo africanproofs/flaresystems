@@ -27,7 +27,8 @@ mcp_server = fastmcp.FastMCP(
         "(ADR-0006). OBSERVE (read, broad): funding_health, registration_status (the "
         "RE423 detector — are we in the registered voter set for the current/next reward "
         "epoch?), observe_status (per-block FTSO participation — on-time submit/reveal + reveal-"
-        "offence detection), epoch_status, clif_doctor, epoch_signing_progress. ACT (membraned, "
+        "offence detection), epoch_status, fwd_status (the custody signer's health), clif_doctor, "
+        "epoch_signing_progress. ACT (membraned, "
         "bounded): funding_propose validates a "
         "gas-funding plan against hard bounds and executes NOTHING (the review step); "
         "funding_apply validates then executes the accepted subset keyless — every line "
@@ -97,6 +98,18 @@ def observe_status(network: str) -> dict:
     Read-only, never signs."""
     try:
         return _envelope(_bridge.run(["observe", "status"], network=network, observe=True))
+    except BridgeError as exc:
+        return _err(str(exc))
+
+
+@mcp_server.tool()
+def fwd_status() -> dict:
+    """The fwd custody signer's health (the one daemon that holds AP's backend keys and serves
+    every network). Returns `{master, sealed_master, fwd}` — each "ok" when the sealed master is
+    loaded and the signer is live. Read-only: probes fwd's /healthz via `fwdctl health`. Custody
+    authority (grant/policy/wallet/master) is human-only and has NO tool here (ADR-0006 NEVER tier)."""
+    try:
+        return _envelope(_bridge.run_fwd(["health"]))
     except BridgeError as exc:
         return _err(str(exc))
 

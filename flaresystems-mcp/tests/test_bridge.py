@@ -80,3 +80,18 @@ def test_from_env_reads_overrides(monkeypatch):
 
 def test_default_apply_disabled():
     assert ClifBridge().allow_apply is False
+
+
+def test_run_fwd_execs_fwdctl_in_fwd_container_no_json_append():
+    r = FakeRunner(stdout='{"master":"ok","sealed_master":"ok","fwd":"ok"}')
+    br = _bridge(r)
+    out = br.run_fwd(["health"])
+    assert out.data["master"] == "ok"
+    # fwdctl (not clif), fwd container, and NO trailing --json (fwdctl emits JSON itself)
+    assert r.calls[0] == ["docker", "exec", "fwd", "fwdctl", "health"]
+
+
+def test_run_fwd_custom_container():
+    r = FakeRunner(stdout="{}")
+    _bridge(r, fwd_container="fwd-prod").run_fwd(["health"])
+    assert r.calls[0][2] == "fwd-prod"

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flaresystems-mcp"
-version = "0.1.2"
+version = "0.1.3"
 description = "Agent-native MCP surface for the fwd+clif system (ADR-0006) — OBSERVE reads + the membraned funding ACT tools. Custody-isolated: holds no keys and no tokens; execs the already-scoped clif containers, bounded by fwd policy."
 authors = ["African Proofs"]
 readme = "README.md"

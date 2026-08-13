@@ -67,6 +67,8 @@ class ClifBridge:
     read_container: str = "clif-epoch-{net}"
     fund_container: str = "clif-fund-{net}"
     observe_container: str = "clif-observe-{net}"
+    fwd_container: str = "fwd"  # the fwd daemon container (one, serves all networks)
+    fwd_cli: str = "fwdctl"  # fwd's in-container CLI
     networks: tuple[str, ...] = _DEFAULT_NETWORKS
     timeout: float = 90.0
     allow_apply: bool = False
@@ -82,6 +84,7 @@ class ClifBridge:
             read_container=os.environ.get("FLARESYSTEMS_MCP_READ_CONTAINER", "clif-epoch-{net}"),
             fund_container=os.environ.get("FLARESYSTEMS_MCP_FUND_CONTAINER", "clif-fund-{net}"),
             observe_container=os.environ.get("FLARESYSTEMS_MCP_OBSERVE_CONTAINER", "clif-observe-{net}"),
+            fwd_container=os.environ.get("FLARESYSTEMS_MCP_FWD_CONTAINER", "fwd"),
             networks=tuple(n.strip() for n in nets.split(",") if n.strip()) if nets else _DEFAULT_NETWORKS,
             timeout=float(os.environ.get("FLARESYSTEMS_MCP_TIMEOUT", "90")),
             allow_apply=os.environ.get("FLARESYSTEMS_MCP_ALLOW_APPLY", "false").lower() == "true",
@@ -108,17 +111,29 @@ class ClifBridge:
         )
         container = template.format(net=network)
         cmd = [self.docker, "exec", container, "clif", *args, "--json"]
+        return self._exec_json(cmd, container)
+
+    def run_fwd(self, args: Sequence[str]) -> ClifResult:
+        """Exec `fwdctl <args>` in the fwd container — the custody signer's READ surface.
+        fwdctl read commands (e.g. `health`) emit JSON directly, so we do NOT append --json.
+        ONLY read commands are ever passed (callers hardcode them); no MCP tool routes a
+        mutating fwdctl verb (grant/policy/wallet/master) — the ADR-0006 NEVER tier stays
+        human-only. The fwd daemon is one process serving every network (no `net`)."""
+        cmd = [self.docker, "exec", self.fwd_container, self.fwd_cli, *args]
+        return self._exec_json(cmd, self.fwd_container)
+
+    def _exec_json(self, cmd: Sequence[str], container: str) -> ClifResult:
         code, out, errtxt = self.runner(cmd, self.timeout)
         out = (out or "").strip()
         if not out:
             raise BridgeError(
-                f"clif produced no JSON (container={container}, exit={code}): "
+                f"no JSON (container={container}, exit={code}): "
                 f"{(errtxt or '').strip()[:400] or 'no stderr'}"
             )
         try:
             data = json.loads(out)
         except json.JSONDecodeError as exc:
             raise BridgeError(
-                f"clif output was not JSON (container={container}, exit={code}): {out[:400]}"
+                f"output was not JSON (container={container}, exit={code}): {out[:400]}"
             ) from exc
         return ClifResult(data=data, exit_code=code)
