@@ -13,11 +13,13 @@ value until the operator opts in. The NEVER tier (fwdctl capability grant / poli
 from __future__ import annotations
 
 import json
+import re as _re
 
 import mcp.server.fastmcp as fastmcp
 
 from flaresystems_mcp.bridge import BridgeError, ClifBridge
 
+_ANSI = _re.compile(r"\x1b\[[0-9;]*m")
 _bridge = ClifBridge.from_env()
 
 mcp_server = fastmcp.FastMCP(
@@ -27,8 +29,9 @@ mcp_server = fastmcp.FastMCP(
         "(ADR-0006). OBSERVE (read, broad): funding_health, registration_status (the "
         "RE423 detector — are we in the registered voter set for the current/next reward "
         "epoch?), observe_status (per-block FTSO participation — on-time submit/reveal + reveal-"
-        "offence detection), epoch_status, fwd_status (the custody signer's health), clif_doctor, "
-        "epoch_signing_progress. ACT (membraned, "
+        "offence detection), epoch_status, fwd_status (the custody signer's health), fwd_audit_tail "
+        "(the hash-chained signing audit log — accountability), clif_doctor, epoch_signing_progress. "
+        "ACT (membraned, "
         "bounded): funding_propose validates a "
         "gas-funding plan against hard bounds and executes NOTHING (the review step); "
         "funding_apply validates then executes the accepted subset keyless — every line "
@@ -112,6 +115,36 @@ def fwd_status() -> dict:
         return _envelope(_bridge.run_fwd(["health"]))
     except BridgeError as exc:
         return _err(str(exc))
+
+
+@mcp_server.tool()
+def fwd_audit_tail(limit: int = 20) -> dict:
+    """The fwd custody audit log — the hash-chained, tamper-evident record of every signing
+    decision (accountability: who asked fwd to do what, and whether it was approved). Returns
+    whether the chain VERIFIES intact plus the last `limit` entries {seq, timestamp, action,
+    decision, caller}. Read-only; the rows carry caller NAMES + action types + approve/deny
+    decisions only — never keys or token values."""
+    limit = max(1, min(int(limit), 200))
+    try:
+        vcode, vout, _ = _bridge.run_fwd_raw(["audit", "verify"])
+        _code, out, err = _bridge.run_fwd_raw(["audit", "tail", "-n", str(limit)])
+    except BridgeError as exc:
+        return _err(str(exc))
+    entries = []
+    for line in _ANSI.sub("", out or "").strip().splitlines():
+        p = line.split("\t")
+        if len(p) >= 5 and p[0].strip().isdigit():
+            entries.append({
+                "seq": int(p[0].strip()), "timestamp": p[1].strip(),
+                "action": p[2].strip(), "decision": p[3].strip(), "caller": p[4].strip(),
+            })
+    m = _re.search(r"(\d+)\s+rows", _ANSI.sub("", vout or ""))
+    return {
+        "ok": vcode == 0,
+        "chain_intact": vcode == 0,  # `audit verify` exits 0 intact, 2 broken
+        "total_rows": int(m.group(1)) if m else None,
+        "entries": entries,
+    }
 
 
 @mcp_server.tool()

@@ -28,6 +28,20 @@ class FakeBridge:
             raise self._raise
         return self._result
 
+    def run_fwd_raw(self, args):
+        self.calls.append((tuple(args), "fwd-raw", False))
+        if self._raise:
+            raise self._raise
+        if tuple(args[:2]) == ("audit", "verify"):
+            return (0, "chain intact: 5 rows", "")
+        if "tail" in args:
+            rows = (
+                "3\t2026-08-11T12:04:49+00:00\tsign-transaction\tapproved\tclif-x\n"
+                "4\t2026-08-11T12:04:50+00:00\ttx-receipt\tapproved\tclif-x"
+            )
+            return (0, rows, "")
+        return (0, "", "")
+
 
 @pytest.fixture
 def patch_bridge(monkeypatch):
@@ -54,6 +68,18 @@ def test_fwd_status_wraps_health(patch_bridge):
     out = server.fwd_status()
     assert out["ok"] is True and out["data"]["master"] == "ok"
     assert b.calls[0][0] == ("health",)  # routed through run_fwd(["health"])
+
+
+def test_fwd_audit_tail_parses_rows_and_verify(patch_bridge):
+    patch_bridge(FakeBridge())
+    out = server.fwd_audit_tail(2)
+    assert out["ok"] and out["chain_intact"] and out["total_rows"] == 5
+    assert len(out["entries"]) == 2
+    e0 = out["entries"][0]
+    assert e0 == {
+        "seq": 3, "timestamp": "2026-08-11T12:04:49+00:00",
+        "action": "sign-transaction", "decision": "approved", "caller": "clif-x",
+    }
 
 
 def test_signing_progress_passes_epoch(patch_bridge):

@@ -122,6 +122,13 @@ class ClifBridge:
         cmd = [self.docker, "exec", self.fwd_container, self.fwd_cli, *args]
         return self._exec_json(cmd, self.fwd_container)
 
+    def run_fwd_raw(self, args: Sequence[str]) -> tuple[int, str, str]:
+        """Exec `fwdctl <args>` in the fwd container returning raw (exit_code, stdout, stderr)
+        — for TEXT read commands (`audit tail`, `audit verify`) that don't emit JSON. Same
+        read-only constraint as run_fwd: callers hardcode read verbs only."""
+        cmd = [self.docker, "exec", self.fwd_container, self.fwd_cli, *args]
+        return self.runner(cmd, self.timeout)
+
     def _exec_json(self, cmd: Sequence[str], container: str) -> ClifResult:
         code, out, errtxt = self.runner(cmd, self.timeout)
         out = (out or "").strip()
